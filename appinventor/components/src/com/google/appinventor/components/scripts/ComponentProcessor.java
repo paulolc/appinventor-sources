@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 
 import javax.tools.Diagnostic;
+import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
@@ -104,6 +106,9 @@ import javax.tools.StandardLocation;
  */
 public abstract class ComponentProcessor extends AbstractProcessor {
   private static final String OUTPUT_PACKAGE = "";
+
+  public static final String MISSING_SIMPLE_PROPERTY_ANNOTATION =
+      "Designer property %s does not have a corresponding @SimpleProperty annotation.";
 
   // Returned by getSupportedAnnotationTypes()
   private static final Set<String> SUPPORTED_ANNOTATION_TYPES = ImmutableSet.of(
@@ -909,7 +914,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     UsesPermissions usesPermissions = element.getAnnotation(UsesPermissions.class);
     if (usesPermissions != null) {
       for (String permission : usesPermissions.permissionNames().split(",")) {
-        componentInfo.permissions.add(permission.trim());
+        updateWithNonEmptyValue(componentInfo.permissions, permission);
       }
     }
 
@@ -917,7 +922,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     UsesLibraries usesLibraries = element.getAnnotation(UsesLibraries.class);
     if (usesLibraries != null) {
       for (String library : usesLibraries.libraries().split(",")) {
-        componentInfo.libraries.add(library.trim());
+        updateWithNonEmptyValue(componentInfo.libraries, library);
       }
     }
 
@@ -925,10 +930,10 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     UsesNativeLibraries usesNativeLibraries = element.getAnnotation(UsesNativeLibraries.class);
     if (usesNativeLibraries != null) {
       for (String nativeLibrary : usesNativeLibraries.libraries().split(",")) {
-        componentInfo.nativeLibraries.add(nativeLibrary.trim());
+        updateWithNonEmptyValue(componentInfo.nativeLibraries, nativeLibrary);
       }
       for (String v7aLibrary : usesNativeLibraries.v7aLibraries().split(",")) {
-        componentInfo.nativeLibraries.add(v7aLibrary.trim() + ARMEABI_V7A_SUFFIX);
+        updateWithNonEmptyValue(componentInfo.nativeLibraries, v7aLibrary.trim() + ARMEABI_V7A_SUFFIX);
       }
     }
 
@@ -936,7 +941,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     UsesAssets usesAssets = element.getAnnotation(UsesAssets.class);
     if (usesAssets != null) {
       for (String file : usesAssets.fileNames().split(",")) {
-        componentInfo.assets.add(file.trim());
+        updateWithNonEmptyValue(componentInfo.assets, file);
       }
     }
 
@@ -945,7 +950,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     if (usesActivities != null) {
       try {
         for (ActivityElement ae : usesActivities.activities()) {
-          componentInfo.activities.add(activityElementToString(ae));
+          updateWithNonEmptyValue(componentInfo.activities, activityElementToString(ae));
         }
       } catch (IllegalAccessException e) {
         messager.printMessage(Diagnostic.Kind.ERROR, "IllegalAccessException when gathering " +
@@ -963,7 +968,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     if (usesBroadcastReceivers != null) {
       try {
         for (ReceiverElement re : usesBroadcastReceivers.receivers()) {
-          componentInfo.broadcastReceivers.add(receiverElementToString(re));
+          updateWithNonEmptyValue(componentInfo.broadcastReceivers, receiverElementToString(re));
         }
       } catch (IllegalAccessException e) {
         messager.printMessage(Diagnostic.Kind.ERROR, "IllegalAccessException when gathering " +
@@ -1229,6 +1234,8 @@ public abstract class ComponentProcessor extends AbstractProcessor {
                                  Element componentElement) {
     // We no longer support properties that use the variant type.
 
+    Map<String, Element> propertyElementsToCheck = new HashMap<>();
+
     for (Element element : componentElement.getEnclosedElements()) {
       if (!isPublicMethod(element)) {
         continue;
@@ -1241,6 +1248,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
       DesignerProperty designerProperty = element.getAnnotation(DesignerProperty.class);
       if (designerProperty != null) {
         componentInfo.designerProperties.put(propertyName, designerProperty);
+        propertyElementsToCheck.put(propertyName, element);
       }
 
       // If property is overridden without again using SimpleProperty, remove
@@ -1308,6 +1316,20 @@ public abstract class ComponentProcessor extends AbstractProcessor {
           // Add the new property to the properties map.
           componentInfo.properties.put(propertyName, newProperty);
         }
+      }
+    }
+
+    // Verify that every DesignerComponent has a corresponding property entry. A mismatch results
+    // in App Inventor being unable to generate code for the designer since the type information
+    // is in the block property only. We check that the designer property name is also present
+    // in the block properties. If not, an error is reported and the build terminates.
+    Set<String> propertyNames = new HashSet<>(componentInfo.designerProperties.keySet());
+    propertyNames.removeAll(componentInfo.properties.keySet());
+    if (!propertyNames.isEmpty()) {
+      for (String propertyName : propertyNames) {
+        messager.printMessage(Kind.ERROR,
+            String.format(MISSING_SIMPLE_PROPERTY_ANNOTATION, propertyName),
+            propertyElementsToCheck.get(propertyName));
       }
     }
   }
@@ -1455,10 +1477,9 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     if (type.equals("java.lang.String")) {
       return "text";
     }
-    // {float, double, int, short, long} -> number
+    // {float, double, int, short, long, byte} -> number
     if (type.equals("float") || type.equals("double") || type.equals("int") ||
-        type.equals("short") || type.equals("long") || type.equals("byte") ||
-        type.equals("short")) {
+        type.equals("short") || type.equals("long") || type.equals("byte")) {
       return "number";
     }
     // YailList -> list
@@ -1552,6 +1573,13 @@ public abstract class ComponentProcessor extends AbstractProcessor {
           return componentTypes.contains(typeName);
         }
       }, visitedTypes);
+    }
+  }
+
+  private void updateWithNonEmptyValue(Set<String> collection, String value) {
+    String trimmedValue = value.trim();
+    if (!trimmedValue.isEmpty()) {
+      collection.add(trimmedValue);
     }
   }
 }

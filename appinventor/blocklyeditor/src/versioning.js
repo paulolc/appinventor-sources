@@ -1,5 +1,5 @@
 // -*- mode: java; c-basic-offset: 2; -*-
-// Copyright © 2013-2017 Massachusetts Institute of Technology, All rights reserved
+// Copyright © 2013-2018 Massachusetts Institute of Technology, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 /**
@@ -1513,7 +1513,11 @@ Blockly.Versioning.AllUpgradeMaps =
     // AI2: - InsertRow, GetRows and GetRowsWithConditions was added.
     // - KeyFile, UseServiceAuthentication and ServiceAccountEmail
     //   were added.
-    3: "noUpgrade"
+    3: "noUpgrade",
+
+    // The LoadingDialogMessage property was added
+    // The ShowLoadingDialog property was added
+    4: "noUpgrade"
 
   }, // End FusiontablesControl upgraders
 
@@ -1758,7 +1762,10 @@ Blockly.Versioning.AllUpgradeMaps =
     20: Blockly.Versioning.renameBlockType('obsufcated_text', 'obfuscated_text'),
 
     // AI2: Added is a string? block to test whether values are strings.
-    21: "noUpgrade"
+    21: "noUpgrade",
+
+    // AI2: Added Break Block
+    22: "noUpgrade"
 
 
   }, // End Language upgraders
@@ -1845,7 +1852,11 @@ Blockly.Versioning.AllUpgradeMaps =
     3: [
       Blockly.Versioning.changeEventName('Map', 'GotGeoJSON', 'GotFeatures'),
       Blockly.Versioning.changeEventName('Map', 'GeoJSONError', 'LoadError')
-    ]
+    ],
+
+    // AI2:
+    // - The Rotation property was added to Map
+    4: "noUpgrade"
 
   }, // End Map upgraders
 
@@ -1891,7 +1902,10 @@ Blockly.Versioning.AllUpgradeMaps =
 
     // Added a ProgressDialog, a dialog that cannot be dismissed by the user.
     // The ShowProgressDialog will show the dialog, and DismissProgressDialog is the only way to dismiss it
-    4: "noUpgrade"
+    4: "noUpgrade",
+
+    // Added TextInputCanceled & ChoosingCanceled event
+    5: "noUpgrade"
 
   }, // End Notifier upgraders
 
@@ -2209,7 +2223,15 @@ Blockly.Versioning.AllUpgradeMaps =
 
     // For FORM_COMPONENT_VERSION 21:
     // - The AccentColor, PrimaryColor, PrimaryColorDark, and Theme properties were added to Screen, and no block needs to be changed.
-    21: "noUpgrade"
+    21: "noUpgrade",
+
+    // For FORM_COMPONENT_VERSION 22:
+    // - The Classic option was added to the Theme property. No blocks need to be changed
+    22: "noUpgrade",
+
+    // For FORM_COMPONENT_VERSION 23:
+    // - The ActionBar designer property was hidden and tied to the Theme property. No blocks need to be changed.
+    23: "noUpgrade"
 
 
   }, // End Screen
@@ -2356,7 +2378,10 @@ Blockly.Versioning.AllUpgradeMaps =
   "TinyDB": {
 
     //This is initial version. Placeholder for future upgrades
-    1: "noUpgrade"
+    1: "noUpgrade",
+
+    //Added Property: Namespace
+    2: "noUpgrade"
 
   }, // End TinyDB upgraders
 
@@ -2498,7 +2523,10 @@ Blockly.Versioning.AllUpgradeMaps =
     3: "ai1CantDoUpgrade", // Just indicates we couldn't do upgrade even if we wanted to
 
     // AI2: Added method XMLTextDecode
-    4: "noUpgrade"
+    4: "noUpgrade",
+      
+    // AI2: Added method UriDecode
+    5: "noUpgrade"
 
   }, // End Web upgraders
 
@@ -2519,7 +2547,10 @@ Blockly.Versioning.AllUpgradeMaps =
     5: "noUpgrade",
 
     // AI2: Added ClearCaches method
-    6: "noUpgrade"
+    6: "noUpgrade",
+
+    // AI2: Added WebViewStringChange
+    7: "noUpgrade"
 
   }, // End WebViewer upgraders
 

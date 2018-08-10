@@ -1,6 +1,6 @@
 // -*- mode: java; c-basic-offset: 2; -*-
 // Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2017 MIT, All rights reserved
+// Copyright 2011-2018 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
@@ -419,8 +419,20 @@ public class YaVersion {
   // For YOUNG_ANDROID_VERSION 166:
   // - MAP_COMPONENT_VERSION was incremented to 3
   // - FEATURE_COLLECTION_COMPONENT_VERSION was incremented to 2
+  // For YOUNG_ANDROID_VERSION 167:
+  // - FORM_COMPONENT_VERSION was incremented to 23
+  // For YOUNG_ANDROID_VERSION 168:
+  // - BLOCKS_LANGUAGE_VERSION was incremented to 22
+  // For YOUNG_ANDROID_VERSION 169:
+  // - NOTIFIER_COMPONENT_VERSION was incremented to 5
+  // For YOUNG_ANDROID_VERSION 170:
+  // - MAP_COMPONENT_VERSION was incremented to 4
+  // For YOUNG_ANDROID_VERSION 171:
+  // - FUSIONTABLESCONTROL_COMPONENT_VERSION was incremented to 4
+  // For YOUNG_ANDROID_VERSION 172:
+  // - WEBVIEWER_COMPONENT_VERSION was incremented to 7
 
-  public static final int YOUNG_ANDROID_VERSION = 166;
+  public static final int YOUNG_ANDROID_VERSION = 172;
 
   // ............................... Blocks Language Version Number ...............................
 
@@ -483,7 +495,7 @@ public class YaVersion {
   // For BLOCKS_LANGUAGE_VERSION 21:
   // - The is-text block was added.
 
-  public static final int BLOCKS_LANGUAGE_VERSION = 21;
+  public static final int BLOCKS_LANGUAGE_VERSION = 22;
 
   // ................................. Component Version Numbers ..................................
 
@@ -732,7 +744,11 @@ public class YaVersion {
   // - The Screen.PrimaryColor property was added
   // - The Screen.PrimaryColorDark property was added
   // - The Screen.Theme property was added
-  public static final int FORM_COMPONENT_VERSION = 21;
+  // For FORM_COMPONENT_VERSION 22:
+  // - The Classic option for themes was added
+  // For FORM_COMPONENT_VERSION 23:
+  // - The ActionBar property was deprecated
+  public static final int FORM_COMPONENT_VERSION = 23;
 
   // For FUSIONTABLESCONTROL_COMPONENT_VERSION 2:
   // - The Fusiontables API was migrated from SQL to V1
@@ -740,7 +756,10 @@ public class YaVersion {
   // - InsertRow, GetRows and GetRowsWithConditions was added.
   // - KeyFile, UseServiceAuthentication and ServiceAccountEmail
   //   were added.
-  public static final int FUSIONTABLESCONTROL_COMPONENT_VERSION = 3;
+  // For FUSIONTABLESCONTROL_COMPONENT_VERSION 4:
+  // - The LoadingDialogMessage property was added
+  // - The ShowLoadingDialog property was added
+  public static final int FUSIONTABLESCONTROL_COMPONENT_VERSION = 4;
 
   public static final int GAMECLIENT_COMPONENT_VERSION = 1;
 
@@ -846,7 +865,9 @@ public class YaVersion {
   // For MAP_COMPONENT_VERSION 3:
   // - GotGeoJSON was renamed to GotFeatures
   // - GeoJSONError was renamed to LoadError
-  public static final int MAP_COMPONENT_VERSION = 3;
+  // For MAP_COMPONENT_VERSION 4:
+  // - Added Rotation property
+  public static final int MAP_COMPONENT_VERSION = 4;
 
   // For MARKER_COMPONENT_VERSION 1:
   // - Initial Marker implementation using OpenStreetMap
@@ -863,7 +884,9 @@ public class YaVersion {
   // - Added NotifierColor, TextColor and NotifierLength options
   // For NOTIFIER_COMPONENT_VERSION 4:
   // - Added a ShowProgressDialog method, and a DismissProgressDialog method
-  public static final int NOTIFIER_COMPONENT_VERSION = 4;
+  // For NOTIFIER_COMPONENT_VERSION 5:
+  // - Added TextInputCanceled & ChoosingCanceled event
+  public static final int NOTIFIER_COMPONENT_VERSION = 5;
 
   public static final int NXT_COLORSENSOR_COMPONENT_VERSION = 1;
 
@@ -1024,7 +1047,9 @@ public class YaVersion {
   // - SetTimeToDisplayFromInstant, and Instant property are added.
   public static final int TIMEPICKER_COMPONENT_VERSION = 3;
 
-  public static final int TINYDB_COMPONENT_VERSION = 1;
+  // For TINYDB_COMPONENT_VERSION 2:
+  // - Added Property: Namespace
+  public static final int TINYDB_COMPONENT_VERSION = 2;
 
   // For TINYWEBDB_COMPONENT_VERSION 2:
   // - The TinyWebDB.ShowAlert method was removed. Notifier.ShowAlert should be used instead.
@@ -1102,7 +1127,9 @@ public class YaVersion {
   // - PUT and DELETE Actions added (PutText, PutTextWithEncoding, PutFile, and Delete).
   // For WEB_COMPONENT_VERSION 4:
   // - Added method XMLTextDecode
-  public static final int WEB_COMPONENT_VERSION = 4;
+  // For WEB_COMPONENT_VERSION 5:
+  // - Added method UriDecode
+  public static final int WEB_COMPONENT_VERSION = 5;
 
   // For WEBVIEWER_COMPONENT_VERSION 2:
   // - The CanGoForward and CanGoBack methods were added
@@ -1114,7 +1141,9 @@ public class YaVersion {
   // - IgnoreSslError property added
   // For WEBVIEWER_COMPONENT_VERSION 6:
   // - ClearCaches method was added
-  public static final int WEBVIEWER_COMPONENT_VERSION = 6;
+  // For WEBVIEWER_COMPONENT_VERSiON 7:
+  // - Added WebViewStringChange event
+  public static final int WEBVIEWER_COMPONENT_VERSION = 7;
 
   // For MEDIASTORE_COMPONENT_VERSION 1:
   // - Initial Version.
@@ -1155,13 +1184,12 @@ public class YaVersion {
 
   public static final String ACCEPTABLE_COMPANION_PACKAGE = "edu.mit.appinventor.aicompanion3";
 
-  public static final String PREFERRED_COMPANION = "2.45";
+  public static final String PREFERRED_COMPANION = "2.47";
   public static final String COMPANION_UPDATE_URL = "";
   public static final String COMPANION_UPDATE_URL1 = "";
-  public static final String [] ACCEPTABLE_COMPANIONS = { "2.45" };
+  public static final String [] ACCEPTABLE_COMPANIONS = { "2.47" };
 
   // Splash Screen Values
   public static final int SPLASH_SURVEY = 1;
-
 
 }

@@ -1,6 +1,6 @@
 // -*- mode: java; c-basic-offset: 2; -*-
 // Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2017 MIT, All rights reserved
+// Copyright 2011-2018 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
@@ -114,6 +114,7 @@ public final class Compiler {
   private static final String ARMEABI_DIR_NAME = "armeabi";
   private static final String ARMEABI_V7A_DIR_NAME = "armeabi-v7a";
 
+  private static final String ASSET_DIR_NAME = "assets";
   private static final String EXT_COMPS_DIR_NAME = "external_comps";
 
   private static final String DEFAULT_APP_NAME = "";
@@ -247,6 +248,8 @@ public final class Compiler {
   private Map<String, String> extTypePathCache = new HashMap<String, String>();
 
   private static final Logger LOG = Logger.getLogger(Compiler.class.getName());
+
+  private BuildServer.ProgressReporter reporter; // Used to report progress of the build
 
   /*
    * Generate the set of Android permissions needed by this project.
@@ -459,11 +462,15 @@ public final class Compiler {
     return name.replace("&", "and");
   }
 
-  private String cleanColor(String color) {
-    if (color.startsWith("&H")) {
-      return "#" + color.substring(2);
+  private String cleanColor(String color, boolean makeOpaque) {
+    String result = color;
+    if (color.startsWith("&H") || color.startsWith("&h")) {
+      result =  "#" + color.substring(2);
     }
-    return color;
+    if (makeOpaque && result.length() == 9) {  // true for #AARRGGBB strings
+      result = "#" + result.substring(3);  // remove any alpha value
+    }
+    return result;
   }
 
   /**
@@ -480,6 +487,23 @@ public final class Compiler {
     out.write("\" parent=\"");
     out.write(parent);
     out.write("\">\n");
+    out.write("<item name=\"windowActionBar\">true</item>\n");
+    out.write("<item name=\"colorPrimary\">@color/colorPrimary</item>\n");
+    out.write("<item name=\"colorPrimaryDark\">@color/colorPrimaryDark</item>\n");
+    out.write("<item name=\"colorAccent\">@color/colorAccent</item>\n");
+    // Handles theme for Notifier
+    out.write("<item name=\"android:dialogTheme\">@style/AIDialog</item>\n");
+    // Handles theme for DatePicker/TimePicker
+    out.write("<item name=\"android:alertDialogTheme\">@style/AIAlertDialog</item>\n");
+    out.write("</style>\n");
+  }
+
+  private static void writeDialogTheme(Writer out, String name, String parent) throws IOException {
+    out.write("<style name=\"");
+    out.write(name);
+    out.write("\" parent=\"");
+    out.write(parent);
+    out.write("\">\n");
     out.write("<item name=\"colorPrimary\">@color/colorPrimary</item>\n");
     out.write("<item name=\"colorPrimaryDark\">@color/colorPrimaryDark</item>\n");
     out.write("<item name=\"colorAccent\">@color/colorAccent</item>\n");
@@ -489,11 +513,11 @@ public final class Compiler {
   /**
    * Create the default color and styling for the app.
    */
-  private boolean createValuesXml(File valuesDir) {
+  private boolean createValuesXml(File valuesDir, String suffix) {
     String colorPrimary = project.getPrimaryColor() == null ? "#A5CF47" : project.getPrimaryColor();
     String colorPrimaryDark = project.getPrimaryColorDark() == null ? "#41521C" : project.getPrimaryColorDark();
     String colorAccent = project.getAccentColor() == null ? "#00728A" : project.getAccentColor();
-    String theme = project.getTheme() == null ? "AppTheme" : project.getTheme();
+    String theme = project.getTheme() == null ? "Classic" : project.getTheme();
     String actionbar = project.getActionBar();
     String parentTheme = theme.replace("AppTheme", "Theme.AppCompat");
     if (!"true".equalsIgnoreCase(actionbar)) {
@@ -503,11 +527,11 @@ public final class Compiler {
         parentTheme += ".NoActionBar";
       }
     }
-    colorPrimary = cleanColor(colorPrimary);
-    colorPrimaryDark = cleanColor(colorPrimaryDark);
-    colorAccent = cleanColor(colorAccent);
-    File colorsXml = new File(valuesDir, "colors.xml");
-    File stylesXml = new File(valuesDir, "styles.xml");
+    colorPrimary = cleanColor(colorPrimary, true);
+    colorPrimaryDark = cleanColor(colorPrimaryDark, true);
+    colorAccent = cleanColor(colorAccent, true);
+    File colorsXml = new File(valuesDir, "colors" + suffix + ".xml");
+    File stylesXml = new File(valuesDir, "styles" + suffix + ".xml");
     try {
       BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(colorsXml), "UTF-8"));
       out.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
@@ -526,7 +550,16 @@ public final class Compiler {
       out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(stylesXml), "UTF-8"));
       out.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
       out.write("<resources>\n");
-      writeTheme(out, "AppTheme", parentTheme);
+      if (!parentTheme.startsWith("Classic")) {
+        writeTheme(out, "AppTheme", parentTheme);
+        if (parentTheme.contains("Light")) {
+          writeDialogTheme(out, "AIDialog", "Theme.AppCompat.Light.Dialog");
+          writeDialogTheme(out, "AIAlertDialog", "Theme.AppCompat.Light.Dialog.Alert");
+        } else {
+          writeDialogTheme(out, "AIDialog", "Theme.AppCompat.Dialog");
+          writeDialogTheme(out, "AIAlertDialog", "Theme.AppCompat.Dialog.Alert");
+        }
+      }
       out.write("<style name=\"TextAppearance.AppCompat.Button\">\n");
       out.write("<item name=\"textAllCaps\">false</item>\n");
       out.write("</style>\n");
@@ -638,7 +671,10 @@ public final class Compiler {
       } else {
         out.write("android:name=\"com.google.appinventor.components.runtime.multidex.MultiDexApplication\" ");
       }
-      out.write("android:theme=\"@style/AppTheme\" ");
+      // Write theme info if we are not using the "Classic" theme (i.e., no theme)
+      if (!"Classic".equalsIgnoreCase(project.getTheme())) {
+        out.write("android:theme=\"@style/AppTheme\" ");
+      }
       out.write(">\n");
 
       for (Project.SourceDescriptor source : project.getSources()) {
@@ -770,12 +806,13 @@ public final class Compiler {
   public static boolean compile(Project project, Set<String> compTypes,
                                 PrintStream out, PrintStream err, PrintStream userErrors,
                                 boolean isForCompanion, String keystoreFilePath,
-                                int childProcessRam, String dexCacheDir) throws IOException, JSONException {
+                                int childProcessRam, String dexCacheDir,
+                                BuildServer.ProgressReporter reporter) throws IOException, JSONException {
     long start = System.currentTimeMillis();
 
     // Create a new compiler instance for the compilation
     Compiler compiler = new Compiler(project, compTypes, out, err, userErrors, isForCompanion,
-                                     childProcessRam, dexCacheDir);
+                                     childProcessRam, dexCacheDir, reporter);
 
     compiler.generateAssets();
     compiler.generateActivities();
@@ -801,7 +838,9 @@ public final class Compiler {
     if (!compiler.prepareApplicationIcon(new File(drawableDir, "ya.png"))) {
       return false;
     }
-    setProgress(15);
+    if (reporter != null) {
+      reporter.report(15);        // Have to call directly because we are in a
+    }                             // Static context
 
     // Create anim directory and animation xml files
     out.println("________Creating animation xml");
@@ -813,7 +852,9 @@ public final class Compiler {
     // Create values directory and style xml files
     out.println("________Creating style xml");
     File styleDir = createDir(resDir, "values");
-    if (!compiler.createValuesXml(styleDir)) {
+    File style21Dir = createDir(resDir, "values-v21");
+    if (!compiler.createValuesXml(styleDir, "") ||
+        !compiler.createValuesXml(style21Dir, "-v21")) {
       return false;
     }
 
@@ -823,7 +864,9 @@ public final class Compiler {
     if (!compiler.writeAndroidManifest(manifestFile)) {
       return false;
     }
-    setProgress(20);
+    if (reporter != null) {
+      reporter.report(20);
+    }
 
     // Insert native libraries
     out.println("________Attaching native libraries");
@@ -848,12 +891,14 @@ public final class Compiler {
     File deployDir = createDir(buildDir, "deploy");
     String tmpPackageName = deployDir.getAbsolutePath() + SLASH +
         project.getProjectName() + ".ap_";
-    File srcJavaDir = createDirectory(buildDir, "generated/src");
-    File rJavaDir = createDirectory(buildDir, "generated/symbols");
+    File srcJavaDir = createDir(buildDir, "generated/src");
+    File rJavaDir = createDir(buildDir, "generated/symbols");
     if (!compiler.runAaptPackage(manifestFile, resDir, tmpPackageName, srcJavaDir, rJavaDir)) {
       return false;
     }
-    setProgress(30);
+    if (reporter != null) {
+      reporter.report(30);
+    }
 
     // Create class files.
     out.println("________Compiling source files");
@@ -864,7 +909,9 @@ public final class Compiler {
     if (!compiler.generateClasses(classesDir)) {
       return false;
     }
-    setProgress(35);
+    if (reporter != null) {
+      reporter.report(35);
+    }
 
     // Invoke dx on class files
     out.println("________Invoking DX");
@@ -883,12 +930,14 @@ public final class Compiler {
     // method of identifying via a hash of the path won't work when files
     // are copied into temporary storage) and processed via a hacked up version of
     // Android SDK's Dex Ant task
-    File tmpDir = createDirectory(buildDir, "tmp");
+    File tmpDir = createDir(buildDir, "tmp");
     String dexedClassesDir = tmpDir.getAbsolutePath();
     if (!compiler.runDx(classesDir, dexedClassesDir, false)) {
       return false;
     }
-    setProgress(85);
+    if (reporter != null) {
+      reporter.report(85);
+    }
 
     // Seal the apk with ApkBuilder
     out.println("________Invoking ApkBuilder");
@@ -897,7 +946,9 @@ public final class Compiler {
     if (!compiler.runApkBuilder(apkAbsolutePath, tmpPackageName, dexedClassesDir)) {
       return false;
     }
-    setProgress(95);
+    if (reporter != null) {
+      reporter.report(95);
+    }
 
     // Sign the apk file
     out.println("________Signing the apk file");
@@ -911,7 +962,9 @@ public final class Compiler {
       return false;
     }
 
-    setProgress(100);
+    if (reporter != null) {
+      reporter.report(100);
+    }
 
     out.println("Build finished in " +
         ((System.currentTimeMillis() - start) / 1000.0) + " seconds");
@@ -1005,7 +1058,7 @@ public final class Compiler {
   @VisibleForTesting
   Compiler(Project project, Set<String> compTypes, PrintStream out, PrintStream err,
            PrintStream userErrors, boolean isForCompanion,
-           int childProcessMaxRam, String dexCacheDir) {
+           int childProcessMaxRam, String dexCacheDir, BuildServer.ProgressReporter reporter) {
     this.project = project;
 
     prepareCompTypes(compTypes);
@@ -1017,6 +1070,7 @@ public final class Compiler {
     this.isForCompanion = isForCompanion;
     this.childProcessRamMb = childProcessMaxRam;
     this.dexCacheDir = dexCacheDir;
+    this.reporter = reporter;
 
   }
 
@@ -1432,7 +1486,7 @@ public final class Compiler {
 
   private boolean runAaptPackage(File manifestFile, File resDir, String tmpPackageName, File sourceOutputDir, File symbolOutputDir) {
     // Need to make sure assets directory exists otherwise aapt will fail.
-    createDir(project.getAssetsDirectory());
+    final File mergedAssetsDir = createDir(project.getBuildDirectory(), ASSET_DIR_NAME);
     String aaptTool;
     String osName = System.getProperty("os.name");
     if (osName.equals("Mac OS X")) {
@@ -1463,7 +1517,7 @@ public final class Compiler {
     aaptPackageCommandLineArgs.add("-S");
     aaptPackageCommandLineArgs.add(mergedResDir.getAbsolutePath());
     aaptPackageCommandLineArgs.add("-A");
-    aaptPackageCommandLineArgs.add(project.getAssetsDirectory().getAbsolutePath());
+    aaptPackageCommandLineArgs.add(mergedAssetsDir.getAbsolutePath());
     aaptPackageCommandLineArgs.add("-I");
     aaptPackageCommandLineArgs.add(getResource(ANDROID_RUNTIME));
     aaptPackageCommandLineArgs.add("-F");
@@ -1551,9 +1605,9 @@ public final class Compiler {
    * @return true on success, otherwise false
    */
   private boolean attachAarLibraries(File buildDir) {
-    final File explodedBaseDir = createDirectory(buildDir, "exploded-aars");
-    final File generatedDir = createDirectory(buildDir, "generated");
-    final File genSrcDir = createDirectory(generatedDir, "src");
+    final File explodedBaseDir = createDir(buildDir, "exploded-aars");
+    final File generatedDir = createDir(buildDir, "generated");
+    final File genSrcDir = createDir(generatedDir, "src");
     explodedAarLibs = new AARLibraries(genSrcDir);
     final Set<String> processedLibs = new HashSet<>();
 
@@ -1584,31 +1638,44 @@ public final class Compiler {
   }
 
   private boolean attachCompAssets() {
-    createDir(project.getAssetsDirectory()); // Needed to insert resources.
+    createDir(project.getBuildDirectory()); // Needed to insert resources.
     try {
       // Gather non-library assets to be added to apk's Asset directory.
       // The assets directory have been created before this.
-      File compAssetDir = createDir(project.getAssetsDirectory(),
-          ASSET_DIRECTORY);
+      File mergedAssetDir = createDir(project.getBuildDirectory(), ASSET_DIR_NAME);
 
+      // Copy component/extension assets to build/assets
       for (String type : assetsNeeded.keySet()) {
         for (String assetName : assetsNeeded.get(type)) {
-          File targetDir = compAssetDir;
-          String sourcePath = "";
-          String pathSuffix = RUNTIME_FILES_DIR + assetName;
+          File targetDir = mergedAssetDir;
+          String sourcePath;
 
           if (simpleCompTypes.contains(type)) {
+            String pathSuffix = RUNTIME_FILES_DIR + assetName;
             sourcePath = getResource(pathSuffix);
           } else if (extCompTypes.contains(type)) {
-            sourcePath = getExtCompDirPath(type) + pathSuffix;
-            targetDir = createDir(targetDir, EXT_COMPS_DIR_NAME);
-            targetDir = createDir(targetDir, type);
+            final String extCompDir = getExtCompDirPath(type);
+            sourcePath = getExtAssetPath(extCompDir, assetName);
+            // If targetDir's location is changed here, you must update Form.java in components to
+            // reference the new location. The path for assets in compiled apps is assumed to be
+            // assets/EXTERNAL-COMP-PACKAGE/ASSET-NAME
+            targetDir = createDir(targetDir, basename(extCompDir));
           } else {
             userErrors.print(String.format(ERROR_IN_STAGE, "Assets"));
             return false;
           }
 
           Files.copy(new File(sourcePath), new File(targetDir, assetName));
+        }
+      }
+
+      // Copy project assets to build/assets
+      File[] assets = project.getAssetsDirectory().listFiles();
+      if (assets != null) {
+        for (File asset : assets) {
+          if (asset.isFile()) {
+            Files.copy(asset, new File(mergedAssetDir, asset.getName()));
+          }
         }
       }
       return true;
@@ -1629,9 +1696,9 @@ public final class Compiler {
    */
   private boolean mergeResources(File mainResDir, File buildDir, String aaptTool) {
     // these should exist from earlier build steps
-    File intermediates = createDirectory(buildDir, "intermediates");
-    File resDir = createDirectory(intermediates, "res");
-    mergedResDir = createDirectory(resDir, "merged");
+    File intermediates = createDir(buildDir, "intermediates");
+    File resDir = createDir(intermediates, "res");
+    mergedResDir = createDir(resDir, "merged");
     PngCruncher cruncher = new AaptCruncher(getResource(aaptTool), null, null);
     return explodedAarLibs.mergeResources(mergedResDir, mainResDir, cruncher);
   }
@@ -1736,7 +1803,9 @@ public final class Compiler {
         Set<String> infoSet = Sets.newHashSet();
         for (int j = 0; j < infoArray.length(); ++j) {
           String info = infoArray.getString(j);
-          infoSet.add(info);
+          if (!info.isEmpty()) {
+            infoSet.add(info);
+          }
         }
 
         if (!infoSet.isEmpty()) {
@@ -1800,34 +1869,11 @@ public final class Compiler {
     return dir;
   }
 
-  /**
-   * Creates a new directory (if it doesn't exist already).
-   *
-   * @param parentDirectory  parent directory of new directory
-   * @param name  name of new directory
-   * @return  new directory
-   */
-  private static File createDirectory(File parentDirectory, String name) {
-    File dir = new File(parentDirectory, name);
-    if (!dir.exists()) {
-      dir.mkdir();
-    }
-    return dir;
-  }
-
-  private static int setProgress(int increments) {
-    Compiler.currentProgress = increments;
+  private void setProgress(int increments) {
     LOG.info("The current progress is "
-              + Compiler.currentProgress + "%");
-    return Compiler.currentProgress;
-  }
-
-  public static int getProgress() {
-    if (Compiler.currentProgress==100) {
-      Compiler.currentProgress = 10;
-      return 100;
-    } else {
-      return Compiler.currentProgress;
+              + increments + "%");
+    if (reporter != null) {
+      reporter.report(increments);
     }
   }
 
@@ -1920,5 +1966,13 @@ public final class Compiler {
       return candidate;
     }
     throw new IllegalStateException("Project lacks extension directory for " + type);
+  }
+
+  private static String basename(String path) {
+    return new File(path).getName();
+  }
+
+  private static String getExtAssetPath(String extCompDir, String assetName) {
+    return extCompDir + File.separator + ASSET_DIR_NAME + File.separator + assetName;
   }
 }
