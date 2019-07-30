@@ -198,6 +198,7 @@ public final class MockForm extends MockContainer {
   private int LANDSCAPE_WIDTH = PHONE_LANDSCAPE_WIDTH;
   private int LANDSCAPE_HEIGHT = PHONE_LANDSCAPE_HEIGHT;
   private boolean landscape = false;
+  private int idxPhoneSize = 0;
 
   // Property names
   private static final String PROPERTY_NAME_TITLE = "Title";
@@ -220,6 +221,8 @@ public final class MockForm extends MockContainer {
 
   // Form UI components
   AbsolutePanel formWidget;
+  AbsolutePanel phoneWidget;
+
   ScrollPanel scrollPanel;
   private TitleBar titleBar;
   private MockComponent selectedComponent;
@@ -235,11 +238,11 @@ public final class MockForm extends MockContainer {
   private static int verticalScrollbarWidth;
 
   private MockFormLayout myLayout;
-  
+
   // flag to control attempting to enable/disable vertical
   // alignment when scrollable property is changed
   private boolean initialized = false;
-  
+
   private YoungAndroidVerticalAlignmentChoicePropertyEditor myVAlignmentPropertyEditor;
 
   public static final String PROPERTY_NAME_HORIZONTAL_ALIGNMENT = "AlignHorizontal";
@@ -262,6 +265,8 @@ public final class MockForm extends MockContainer {
     // future problems if we ever have threads creating forms in parallel.
     myLayout = MockFormHelper.getLayout();
 
+    phoneWidget = new AbsolutePanel();
+    phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhonePortrait");
     formWidget = new AbsolutePanel();
     formWidget.setStylePrimaryName("ode-SimpleMockForm");
 
@@ -277,8 +282,9 @@ public final class MockForm extends MockContainer {
     //Add navigation bar at the bottom of the viewer.
     formWidget.add(new NavigationBar());
 
-    initComponent(formWidget);
-    
+    phoneWidget.add(formWidget);
+    initComponent(phoneWidget);
+
     // Set up the initial state of the vertical alignment property editor and its dropdowns
     try {
       myVAlignmentPropertyEditor = PropertiesUtil.getVAlignmentEditor(properties);
@@ -292,26 +298,37 @@ public final class MockForm extends MockContainer {
     setScrollableProperty(getPropertyValue(PROPERTY_NAME_SCROLLABLE));
   }
 
-  public void changePreviewSize(boolean isTablet) {
-    if (isTablet) {
-      PORTRAIT_WIDTH   = TABLET_PORTRAIT_WIDTH;
-      PORTRAIT_HEIGHT  = TABLET_PORTRAIT_HEIGHT;
-      LANDSCAPE_WIDTH  = TABLET_LANDSCAPE_WIDTH;
-      LANDSCAPE_HEIGHT = TABLET_LANDSCAPE_HEIGHT;
-    }
-    else {
-      PORTRAIT_WIDTH = PHONE_PORTRAIT_WIDTH;
-      PORTRAIT_HEIGHT = PHONE_PORTRAIT_HEIGHT;
-      LANDSCAPE_WIDTH = PHONE_LANDSCAPE_WIDTH;
-      LANDSCAPE_HEIGHT = PHONE_LANDSCAPE_HEIGHT;
-    }
+  public void changePreviewSize(int width, int height, int idx) {
+    // It will definitely be modified in the future to add more options.
+    PORTRAIT_WIDTH = width;
+    PORTRAIT_HEIGHT = height;
+    LANDSCAPE_WIDTH = height;
+    LANDSCAPE_HEIGHT = width;
 
-    if (landscape)
+    idxPhoneSize = idx;
+
+    if (landscape) {
+      setPhoneStyle();
       resizePanel(LANDSCAPE_WIDTH, LANDSCAPE_HEIGHT);
-    else
-      resizePanel(PORTRAIT_WIDTH, PORTRAIT_HEIGHT);
+    }
+   else {
+      setPhoneStyle();
+      resizePanel(width, height);
+    }
   }
 
+  private void setPhoneStyle() {
+    if (landscape) {
+      if (idxPhoneSize == 0) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhoneLandscape");
+      else if (idxPhoneSize == 1) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhoneLandscapeTablet");
+      else if (idxPhoneSize == 2) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhoneLandscapeMonitor");
+    }
+    else {
+      if (idxPhoneSize == 0) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhonePortrait");
+      else if (idxPhoneSize == 1) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhonePortraitTablet");
+      else if (idxPhoneSize == 2) phoneWidget.setStylePrimaryName("ode-SimpleMockFormPhonePortraitMonitor");
+    }
+  }
   /*
    * Resizes the scrollPanel and formWidget based on the screen size.
    */
@@ -528,10 +545,12 @@ public final class MockForm extends MockContainer {
         screenWidth = LANDSCAPE_WIDTH;
         screenHeight = LANDSCAPE_HEIGHT;
         landscape = true;
+        setPhoneStyle();
       } else {
         screenWidth = PORTRAIT_WIDTH;
         screenHeight = PORTRAIT_HEIGHT;
         landscape = false;
+        setPhoneStyle();
       }
       usableScreenHeight = screenHeight - PhoneBar.HEIGHT - titleBar.getHeight() - NavigationBar.HEIGHT;
       resizePanel(screenWidth, screenHeight);
@@ -627,7 +646,7 @@ public final class MockForm extends MockContainer {
           SettingsConstants.YOUNG_ANDROID_SETTINGS_APP_NAME, aname);
     }
   }
-  
+
   private void setTitleVisibleProperty(String text) {
     boolean visible = Boolean.parseBoolean(text);
     titleBar.setVisible(visible);
